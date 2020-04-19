@@ -5,6 +5,8 @@
 // datasheet at https://www.atlas-scientific.com/_files/_datasheets/_circuit/pH_EZO_datasheet.pdf
 // works only in i2c mode
 
+#ifdef USES_P214
+
 #define PLUGIN_214
 #define PLUGIN_ID_214 214
 #define PLUGIN_NAME_214       "Environment - Atlas Scientific pH EZO"
@@ -73,6 +75,15 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
           addHtml(boardInfo.substring(pos2+1));
           addHtml(F("</TD></TR>"));
 
+          status = _P214_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],"T,?",sensordata);
+          if (status){
+            boardInfo = sensordata;
+            addHtml(F("<TR><TD>Temperature compensation : </TD><TD>T="));
+            pos2 = boardInfo.lastIndexOf(',');
+            addHtml(boardInfo.substring(pos2+1));
+            addHtml(F("</TD></TR>\n"));
+          }
+
           addHtml(F("<input type='hidden' name='plugin_214_sensorVersion' value='"));
           addHtml(boardInfo.substring(pos2+1));
           addHtml(F("'>"));
@@ -86,6 +97,10 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
         addFormCheckBox(F("Status LED"),F("Plugin_214_status_led"), Settings.TaskDevicePluginConfig[event->TaskIndex][1]);
 
         addFormSubHeader(F("Calibration"));
+        addRowLabel(F("<strong>Clear calibration</strong>"));
+        addFormCheckBox(F("Enable"),F("Plugin_214_clear_cal"), false);
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_clear_cal\").onclick= function() {document.getElementById(\"Plugin_214_enable_cal_M\").checked = false;document.getElementById(\"Plugin_214_enable_cal_L\").checked = false;document.getElementById(\"Plugin_214_enable_cal_H\").checked = false;};</script>\n"));
+        addFormNote(F("This will erase all calibration informations !"));
 
         int nb_calibration_points = -1;
         status = _P214_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0], "Cal,?",sensordata);
@@ -100,34 +115,34 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
         }
 
         addRowLabel(F("<strong>Middle</strong>"));
-        addFormNumericBox(F("Ref Ph"),F("Plugin_214_ref_cal_M' step='0.01"),Settings.TaskDevicePluginConfigFloat[event->TaskIndex][1],1,14);
+        addFormFloatNumberBox(F("Ref Ph"),F("Plugin_214_ref_cal_M' step='0.01"),Settings.TaskDevicePluginConfigFloat[event->TaskIndex][1],1,14);
         if (nb_calibration_points > 0) {
           addHtml(F("&nbsp;<span style='color:green;'>OK</span>"));
         } else {
           addHtml(F("&nbsp;<span style='color:red;'>Not yet calibrated</span>"));
         }
         addFormCheckBox(F("Enable"),F("Plugin_214_enable_cal_M"), false);
-        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_enable_cal_M\").onclick = function(){document.getElementById(\"Plugin_214_enable_cal_L\").checked = false;document.getElementById(\"Plugin_214_enable_cal_H\").checked = false;};</script>\n"));
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_enable_cal_M\").onclick = function(){document.getElementById(\"Plugin_214_clear_cal\").checked = false;document.getElementById(\"Plugin_214_enable_cal_L\").checked = false;document.getElementById(\"Plugin_214_enable_cal_H\").checked = false;};</script>\n"));
 
         addRowLabel(F("<strong>Low</strong>"));
-        addFormNumericBox(F("Ref Ph"),F("Plugin_214_ref_cal_L' step='0.01"), Settings.TaskDevicePluginConfigFloat[event->TaskIndex][2],1,14);
+        addFormFloatNumberBox(F("Ref Ph"),F("Plugin_214_ref_cal_L' step='0.01"), Settings.TaskDevicePluginConfigFloat[event->TaskIndex][2],1,14);
         if (nb_calibration_points > 1) {
           addHtml(F("&nbsp;<span style='color:green;'>OK</span>"));
         } else {
           addHtml(F("&nbsp;<span style='color:red;'>Not yet calibrated</span>"));
         }
         addFormCheckBox(F("Enable"),F("Plugin_214_enable_cal_L"), false);
-        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_enable_cal_L\").onclick = function(){document.getElementById(\"Plugin_214_enable_cal_M\").checked = false;document.getElementById(\"Plugin_214_enable_cal_H\").checked = false;};</script>\n"));
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_enable_cal_L\").onclick = function(){document.getElementById(\"Plugin_214_clear_cal\").checked = false;document.getElementById(\"Plugin_214_enable_cal_M\").checked = false;document.getElementById(\"Plugin_214_enable_cal_H\").checked = false;};</script>\n"));
 
         addHtml(F("<TR><TD><strong>High</strong></TD>"));
-        addFormNumericBox(F("Ref Ph"),F("Plugin_214_ref_cal_H' step='0.01"), Settings.TaskDevicePluginConfigFloat[event->TaskIndex][3],1,14);
+        addFormFloatNumberBox(F("Ref Ph"),F("Plugin_214_ref_cal_H' step='0.01"), Settings.TaskDevicePluginConfigFloat[event->TaskIndex][3],1,14);
         if (nb_calibration_points > 2) {
           addHtml(F("&nbsp;<span style='color:green;'>OK</span>"));
         } else {
           addHtml(F("&nbsp;<span style='color:orange;'>Not yet calibrated</span>"));
         }
         addFormCheckBox(F("Enable"),F("Plugin_214_enable_cal_H"), false);
-        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_enable_cal_H\").onclick = function(){document.getElementById(\"Plugin_214_enable_cal_L\").checked = false;document.getElementById(\"Plugin_214_enable_cal_M\").checked = false;};</script>\n"));
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_214_enable_cal_H\").onclick = function(){document.getElementById(\"Plugin_214_clear_cal\").checked = false;document.getElementById(\"Plugin_214_enable_cal_L\").checked = false;document.getElementById(\"Plugin_214_enable_cal_M\").checked = false;};</script>\n"));
 
         if (nb_calibration_points > 1){
           char sensordata[32];
@@ -143,6 +158,9 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
         }
 
         addFormSubHeader(F("Temperature compensation"));
+        addFormCheckBox(F("Enable Temperature compensation"), F("Plugin_214_enable_temp_compensation"), Settings.TaskDevicePluginConfig[event->TaskIndex][2]);
+        addFormNote(F("Should be disabled during calibration"));
+
         char deviceTemperatureTemplate[40];
         LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
         addFormTextBox(F("Temperature "), F("Plugin_214_temperature_template"), deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
@@ -150,7 +168,7 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
         float value;
         char strValue[5];
         addHtml(F("<div class='note'>"));
-        if (Calculate(deviceTemperatureTemplate,&value) == CALCULATE_OK ){
+        if (_P214_get_temperature(deviceTemperatureTemplate,&value) == CALCULATE_OK ){
           addHtml(F("Actual value : "));
           dtostrf(value,5,2,strValue);
           addHtml(strValue);
@@ -184,7 +202,12 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
 
         String cmd ("Cal,");
         bool triggerCalibrate = false;
-        if (isFormItemChecked("Plugin_214_enable_cal_M")) {
+  
+        if (isFormItemChecked("Plugin_214_clear_cal")) {
+          cmd += "clear";
+          triggerCalibrate = true;
+        }
+        else if (isFormItemChecked("Plugin_214_enable_cal_M")) {
           cmd += "mid,";
           cmd += Settings.TaskDevicePluginConfigFloat[event->TaskIndex][1];
           triggerCalibrate = true;
@@ -205,9 +228,11 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
         char deviceTemperatureTemplate[40];
         String tmpString = WebServer.arg(F("Plugin_214_temperature_template"));
         strncpy(deviceTemperatureTemplate, tmpString.c_str(), sizeof(deviceTemperatureTemplate)-1);
-        deviceTemperatureTemplate[sizeof(deviceTemperatureTemplate)-1]=0; //be sure that our string ends with a \0
+        deviceTemperatureTemplate[sizeof(deviceTemperatureTemplate)-1] = 0; //be sure that our string ends with a \0
 
         SaveCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
+
+        Settings.TaskDevicePluginConfig[event->TaskIndex][2] = isFormItemChecked(F("Plugin_214_enable_temp_compensation"));
 
         Plugin_214_init = false;
         success = true;
@@ -224,20 +249,21 @@ boolean Plugin_214(byte function, struct EventStruct *event, String& string)
         char sensordata[32];
         bool status;
 
-        //first set the temperature of reading
-        char deviceTemperatureTemplate[40];
-        LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
+        //first set the temperature of reading (if temperature compensation it is enabled)
+        if (Settings.TaskDevicePluginConfig[event->TaskIndex][2] != 0) {
+          char deviceTemperatureTemplate[40];
+          LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
 
-        String setTemperature("T,");
-        float temperatureReading;
-        if (Calculate(deviceTemperatureTemplate,&temperatureReading) == CALCULATE_OK ){
-          setTemperature += temperatureReading;
-        } else {
-          success = false;
-          break;
+          String setTemperature("T,");
+          float temperatureReading;
+          if (_P215_get_temperature(deviceTemperatureTemplate,&temperatureReading) == CALCULATE_OK ){
+            setTemperature += temperatureReading;
+          } else {
+            success = false;
+            break;
+          }
+          status = _P214_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],setTemperature.c_str(),sensordata);
         }
-
-        status = _P214_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],setTemperature.c_str(),sensordata);
 
         //ok, now we can read the pH value
         status = _P214_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],"r",sensordata);
@@ -299,6 +325,7 @@ bool _P214_send_I2C_command(uint8_t I2Caddress,const char * cmd, char* sensordat
     byte i2c_response_code = 0;
     byte in_char = 0;
 
+    Serial.print("EZO Ph < ");
     Serial.println(cmd);
     Wire.beginTransmission(I2Caddress);
     Wire.write(cmd);
@@ -350,24 +377,35 @@ bool _P214_send_I2C_command(uint8_t I2Caddress,const char * cmd, char* sensordat
 
       switch (i2c_response_code) {
         case 1:
-          Serial.print( F("< success, answer = "));
+          Serial.print( F("EZO Ph > success, answer = "));
           Serial.println(sensordata);
           break;
 
         case 2:
-          Serial.println( F("< command failed"));
+          Serial.println( F("EZO Ph > command failed"));
           return false;
 
         case 254:
-          Serial.println( F("< command pending"));
+          Serial.println( F("EZO Ph > command pending"));
           break;
 
         case 255:
-          Serial.println( F("< no data"));
+          Serial.println( F("EZO Ph > no data"));
           return false;
       }
     }
 
-    Serial.println(sensordata);
     return true;
 }
+
+int _P214_get_temperature(char * formula,float * result) {
+  String formulaTemplate;
+  String parsedFormula;
+
+  formulaTemplate = formula;
+  parsedFormula = parseTemplate(formulaTemplate,formulaTemplate.length());
+
+  return Calculate(parsedFormula.c_str(),result);
+}
+
+#endif

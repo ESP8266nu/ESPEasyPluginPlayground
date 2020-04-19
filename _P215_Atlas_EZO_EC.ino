@@ -5,6 +5,8 @@
 // datasheet at https://www.atlas-scientific.com/_files/_datasheets/_circuit/EC_EZO_datasheet.pdf
 // works only in i2c mode
 
+#ifdef USES_P215
+
 #define PLUGIN_215
 #define PLUGIN_ID_215 215
 #define PLUGIN_NAME_215       "Environment - Atlas Scientific EC EZO"
@@ -84,6 +86,14 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
           addHtml(boardInfo.substring(pos2+1));
           addHtml(F("</TD></TR>\n"));
 
+          status = _P215_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],"T,?",sensordata);
+          if (status){
+            boardInfo = sensordata;
+            addHtml(F("<TR><TD>Temperature compensation : </TD><TD>T="));
+            pos2 = boardInfo.lastIndexOf(',');
+            addHtml(boardInfo.substring(pos2+1));
+            addHtml(F("</TD></TR>\n"));
+          }
         } else {
           addHtml(F("<span style='color:red;'>Unable to send command to device</span>"));
           success = false;
@@ -93,28 +103,33 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
         addFormCheckBox(F("Status LED"), F("Plugin_215_status_led"), Settings.TaskDevicePluginConfig[event->TaskIndex][1]);
 
         addFormSubHeader(F("Calibration"));
+        addRowLabel(F("<strong>Clear calibration</strong>"));
+        addFormCheckBox(F("Enable"),F("Plugin_215_clear_cal"), false);
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_clear_cal\").onclick=function() {document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;};</script>"));
+        addFormNote(F("This will erase all calibration informations !"));
 
         addRowLabel(F("<strong>Dry calibration</strong>"));
         addFormCheckBox(F("Enable"),F("Plugin_215_enable_cal_dry"), false);
-        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_enable_cal_dry\").onclick=function() {document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;};</script>"));
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_enable_cal_dry\").onclick=function() {document.getElementById(\"Plugin_215_clear_cal\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;};</script>"));
         addFormNote(F("Dry calibration must always be done first!"));
 
         addRowLabel(F("<strong>Single point calibration</strong> "));
         addFormCheckBox(F("Enable"),F("Plugin_215_enable_cal_single"), false);
-        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_enable_cal_single\").onclick=function() {document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;};</script>"));
-        addFormNumericBox(F("Ref EC"),F("Plugin_215_ref_cal_single"), Settings.TaskDevicePluginConfig[event->TaskIndex][2]);
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_enable_cal_single\").onclick=function() {document.getElementById(\"Plugin_215_clear_cal\").checked = false;document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;};</script>"));
+        addFormNumericBox(F("Ref EC"),F("Plugin_215_ref_cal_single"), Settings.TaskDevicePluginConfigLong[event->TaskIndex][0],0,1000000);
         addUnit("&micro;S");
 
-        addRowLabel(F("<strong>Low calibration</strong>"));
-        addFormCheckBox(F("enable"),F("Plugin_215_enable_cal_L' onClick='document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;"), false);
+        addRowLabel(F("<strong>Two points calibration</strong> "));
+        addRowLabel(F("Low calibration"));
+        addFormCheckBox(F("enable"),F("Plugin_215_enable_cal_L' onClick='document.getElementById(\"Plugin_215_clear_cal\").checked = false;document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;"), false);
         addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_enable_cal_L\").onclick=function() {document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_H\").checked = false;};</script>"));
-        addFormNumericBox(F("Ref EC"),F("Plugin_215_ref_cal_L"), Settings.TaskDevicePluginConfig[event->TaskIndex][3]);
+        addFormNumericBox(F("Ref EC"),F("Plugin_215_ref_cal_L"), Settings.TaskDevicePluginConfigLong[event->TaskIndex][1],0,1000000);
         addUnit("&micro;S");
 
-        addRowLabel(F("<strong>High calibration</strong>"));
+        addRowLabel(F("High calibration"));
         addFormCheckBox(F("Enable"),F("Plugin_215_enable_cal_H"), false);
-        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_enable_cal_H\").onclick=function() {document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;};</script>"));
-        addFormNumericBox(F("Ref EC"),F("Plugin_215_ref_cal_H"), Settings.TaskDevicePluginConfig[event->TaskIndex][4]);
+        addHtml(F("\n<script type='text/javascript'>document.getElementById(\"Plugin_215_clear_cal\").checked = false;document.getElementById(\"Plugin_215_enable_cal_H\").onclick=function() {document.getElementById(\"Plugin_215_enable_cal_dry\").checked = false;document.getElementById(\"Plugin_215_enable_cal_single\").checked = false;;document.getElementById(\"Plugin_215_enable_cal_L\").checked = false;};</script>"));
+        addFormNumericBox(F("Ref EC"),F("Plugin_215_ref_cal_H"), Settings.TaskDevicePluginConfigLong[event->TaskIndex][2],0,1000000);
         addUnit("&micro;S");
 
         status = _P215_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0], "Cal,?",sensordata);
@@ -133,6 +148,9 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
         }
 
         addFormSubHeader(F("Temperature compensation"));
+        addFormCheckBox(F("Enable Temperature compensation"), F("Plugin_215_enable_temp_compensation"), Settings.TaskDevicePluginConfig[event->TaskIndex][2]);
+        addFormNote(F("Should be disabled during calibration"));
+
         char deviceTemperatureTemplate[40];
         LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
         addFormTextBox(F("Temperature "), F("Plugin_215_temperature_template"), deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
@@ -140,7 +158,7 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
         float value;
         char strValue[5];
         addHtml(F("<div class='note'>"));
-        if (Calculate(deviceTemperatureTemplate,&value) == CALCULATE_OK ){
+        if (_P215_get_temperature(deviceTemperatureTemplate,&value) == CALCULATE_OK ){
           addHtml(F("Actual value : "));
           dtostrf(value,5,2,strValue);
           addHtml(strValue);
@@ -167,25 +185,32 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
         }
         Settings.TaskDevicePluginConfig[event->TaskIndex][1] = isFormItemChecked(F("Plugin_215_status_led"));
 
-        Settings.TaskDevicePluginConfig[event->TaskIndex][2] = getFormItemInt(F("Plugin_215_ref_cal_single"));
-        Settings.TaskDevicePluginConfig[event->TaskIndex][3] = getFormItemInt(F("Plugin_215_ref_cal_L"));
-        Settings.TaskDevicePluginConfig[event->TaskIndex][4] = getFormItemInt(F("Plugin_215_ref_cal_H"));
+        long ref_cal_single = getFormItemInt(F("Plugin_215_ref_cal_single"));
+        long ref_cal_L = getFormItemInt(F("Plugin_215_ref_cal_L"));
+        long ref_cal_H = getFormItemInt(F("Plugin_215_ref_cal_H"));
+        Settings.TaskDevicePluginConfigLong[event->TaskIndex][0] = ref_cal_single;
+        Settings.TaskDevicePluginConfigLong[event->TaskIndex][1] = ref_cal_L;
+        Settings.TaskDevicePluginConfigLong[event->TaskIndex][2] = ref_cal_H;
 
         String cmd ("Cal,");
         bool triggerCalibrate = false;
         if (isFormItemChecked("Plugin_215_enable_cal_dry")) {
           cmd += "dry";
           triggerCalibrate = true;
+        }
+        else if (isFormItemChecked("Plugin_215_clear_cal")) {
+          cmd += "clear";
+          triggerCalibrate = true;
         } else if (isFormItemChecked("Plugin_215_enable_cal_single")){
-          cmd += Settings.TaskDevicePluginConfig[event->TaskIndex][2];
+          cmd += ref_cal_single;
           triggerCalibrate = true;
         } else if (isFormItemChecked("Plugin_215_enable_cal_L")){
           cmd += "low,";
-          cmd += Settings.TaskDevicePluginConfig[event->TaskIndex][3];
+          cmd += ref_cal_L;
           triggerCalibrate = true;
         } else if (isFormItemChecked("Plugin_215_enable_cal_H")){
           cmd += "high,";
-          cmd += Settings.TaskDevicePluginConfig[event->TaskIndex][4];
+          cmd += ref_cal_H;
           triggerCalibrate = true;
         }
         if (triggerCalibrate){
@@ -199,6 +224,8 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
         deviceTemperatureTemplate[sizeof(deviceTemperatureTemplate)-1]=0; //be sure that our string ends with a \0
 
         SaveCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
+
+        Settings.TaskDevicePluginConfig[event->TaskIndex][2] = isFormItemChecked(F("Plugin_215_enable_temp_compensation"));
 
         Plugin_215_init = false;
         success = true;
@@ -215,20 +242,23 @@ boolean Plugin_215(byte function, struct EventStruct *event, String& string)
         char sensordata[32];
         bool status;
 
-        //first set the temperature of reading
-        char deviceTemperatureTemplate[40];
-        LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
+        //first set the temperature of reading (if temperature compensation it is enabled)
 
-        String setTemperature("T,");
-        float temperatureReading;
-        if (Calculate(deviceTemperatureTemplate,&temperatureReading) == CALCULATE_OK ){
-          setTemperature += temperatureReading;
-        } else {
-          success = false;
-          break;
+        if (Settings.TaskDevicePluginConfig[event->TaskIndex][2] != 0) {
+          char deviceTemperatureTemplate[40];
+          LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemperatureTemplate, sizeof(deviceTemperatureTemplate));
+
+          String setTemperature("T,");
+          float temperatureReading;
+          if (_P215_get_temperature(deviceTemperatureTemplate,&temperatureReading) == CALCULATE_OK ){
+            setTemperature += temperatureReading;
+          } else {
+            success = false;
+            break;
+          }
+
+          status = _P215_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],setTemperature.c_str(),sensordata);
         }
-
-        status = _P215_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],setTemperature.c_str(),sensordata);
 
         //ok, now we can read the EC value
         status = _P215_send_I2C_command(Settings.TaskDevicePluginConfig[event->TaskIndex][0],"r",sensordata);
@@ -290,6 +320,7 @@ bool _P215_send_I2C_command(uint8_t I2Caddress,const char * cmd, char* sensordat
     byte i2c_response_code = 0;
     byte in_char = 0;
 
+    Serial.print( F("EZO EC <"));
     Serial.println(cmd);
     Wire.beginTransmission(I2Caddress);
     Wire.write(cmd);
@@ -341,24 +372,35 @@ bool _P215_send_I2C_command(uint8_t I2Caddress,const char * cmd, char* sensordat
 
       switch (i2c_response_code) {
         case 1:
-          Serial.print( F("< success, answer = "));
+          Serial.print( F("EZO EC > success, answer = "));
           Serial.println(sensordata);
           break;
 
         case 2:
-          Serial.println( F("< command failed"));
+          Serial.println( F("EZO EC > command failed"));
           return false;
 
         case 254:
-          Serial.println( F("< command pending"));
+          Serial.println( F("EZO EC > command pending"));
           break;
 
         case 255:
-          Serial.println( F("< no data"));
+          Serial.println( F("EZO EC > no data"));
           return false;
       }
     }
 
-    Serial.println(sensordata);
     return true;
 }
+
+int _P215_get_temperature(char * formula,float * result) {
+  String formulaTemplate;
+  String parsedFormula;
+
+  formulaTemplate = formula;
+  parsedFormula = parseTemplate(formulaTemplate,formulaTemplate.length());
+
+  return Calculate(parsedFormula.c_str(),result);
+}
+
+#endif
