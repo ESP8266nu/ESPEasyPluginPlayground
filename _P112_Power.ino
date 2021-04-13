@@ -44,7 +44,7 @@ boolean Plugin_112(byte function, struct EventStruct *event, String& string)
     {
       Device[++deviceCount].Number           = PLUGIN_ID_112;
       Device[deviceCount].Type               = DEVICE_TYPE_SINGLE;
-      Device[deviceCount].VType              = SENSOR_TYPE_DUAL;
+      Device[deviceCount].VType              = Sensor_VType::SENSOR_TYPE_DUAL;
       Device[deviceCount].Ports              = 0;
       Device[deviceCount].PullUpOption       = false;
       Device[deviceCount].InverseLogicOption = false;
@@ -161,7 +161,7 @@ boolean Plugin_112(byte function, struct EventStruct *event, String& string)
       // Store the raw value in the unused 4th position.
       // This is needed to restore the value from RTC as it may be converted into another output value using a formula.
       UserVar[event->BaseVarIndex + 3] = Plugin_112_pulseTotalCounter[event->TaskIndex];
-      event->sensorType                = SENSOR_TYPE_DUAL;
+      event->sensorType                = Sensor_VType::SENSOR_TYPE_DUAL;
 
       // String log = F("READ : Save ");
       // log += SaveCustomTaskSettings(event->TaskIndex, (byte*)&Plugin_112_pulseUsage[event->TaskIndex], sizeof(Plugin_112_pulseUsage[event->TaskIndex]));
