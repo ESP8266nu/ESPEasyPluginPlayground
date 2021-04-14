@@ -6,9 +6,7 @@
 #define CC1101PACKET_H_
 
 #include <stdio.h>
-#ifdef ESP8266
 #include <Arduino.h>
-#endif
 
 #define CC1101_BUFFER_LEN        64
 #define CC1101_DATA_LEN          CC1101_BUFFER_LEN - 3
@@ -18,7 +16,7 @@ class CC1101Packet
 {
 	public:
 		uint8_t length;
-		uint8_t data[72];
+		uint8_t data[128];
 };
 
 
