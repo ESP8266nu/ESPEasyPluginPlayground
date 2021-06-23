@@ -5,7 +5,7 @@
 #ifdef USES_P208
 
 // Working:
-// - support different digit-size's 
+// - support different digit-size's.
 // - Display Text via:
 //   1.  ESPEasy-Webinterface (Line-1-Line-x)
 //   2.  http-request:
@@ -25,7 +25,11 @@
 //       In hardware tab; 
 //       - enable SPI; 
 //       - Select VSPI:CLK=GPIO-18, MISO=GPIO-19, MOSI=GPIO-23 
-//         (miso not used)
+//         (MISO not used)
+//
+// - Tested on
+//    - Hardware ESP32
+//    - ESPEasy-mega-20210223
 
 // ToDo:
 // - different digit-size within a line....
@@ -46,7 +50,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #define lcd_lines 6
-#define Digits_per_template_line 48
+#define Digits_per_template_line 48  // This value must be used at the function "displayText" declaration!
 #define digits_per_display_line 14
 
 Adafruit_PCD8544 *lcd3 = nullptr;
@@ -162,7 +166,8 @@ boolean Plugin_208(byte function, struct EventStruct *event, String& string){
         lcd3->setRotation(plugin1);
         char deviceTemplate[lcd_lines][Digits_per_template_line];
         LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemplate, sizeof(deviceTemplate));
-        displayText3(deviceTemplate, event);
+        displayText(deviceTemplate, event);
+        //displayText((byte**)&deviceTemplate, event);
         lcd3->display();
         setBacklight(event); 
         success = true;
@@ -172,16 +177,17 @@ boolean Plugin_208(byte function, struct EventStruct *event, String& string){
     case PLUGIN_READ:{
         char deviceTemplate[lcd_lines][Digits_per_template_line];
         LoadCustomTaskSettings(event->TaskIndex, (byte*)&deviceTemplate, sizeof(deviceTemplate));
-        displayText3(deviceTemplate, event);
+        displayText(deviceTemplate, event);
+        //displayText((byte**)&deviceTemplate, event);
         success = false;
         break;
       }
 
     case PLUGIN_WRITE:{
         String tmpString  = string;
-        String StringToDisplay = "";
-        String line_content_ist = "";
-        String line_content_soll = "";
+        String StringToDisplay;
+        String line_content_ist;
+        String line_content_soll;
         int argIndex = tmpString.indexOf(',');
 
         if (argIndex){
@@ -248,9 +254,10 @@ void setBacklight(struct EventStruct *event) {
   }
 }
 
-boolean displayText3(char deviceTemplate[][48], struct EventStruct *event ){ // 48 must be equal to "#define Digits_per_template_line"
+boolean displayText(char deviceTemplate[][48], struct EventStruct *event ){ // 48 must be equal to "#define Digits_per_template_line"
+//boolean displayText( char &deviceTemplate, struct EventStruct *event ){ // 48 must be equal to "#define Digits_per_template_line"
         String log = F("PCD8544: ");
-        String string =F("");
+        String string ;
         lcd3->clearDisplay();
         lcd3->setTextColor(BLACK);
         lcd3->setCursor(0,0);
@@ -262,9 +269,8 @@ boolean displayText3(char deviceTemplate[][48], struct EventStruct *event ){ // 
           }else{
             lcd3->setTextSize(1);
           }
-          String tmpString = F(deviceTemplate[x]);
-          String newString = F("");
-          //String newString3 = F("");
+          String tmpString = deviceTemplate[x];
+          String newString;
           if (tmpString.length()){
             newString = parseTemplate(tmpString, false);
           }else{
